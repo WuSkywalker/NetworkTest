@@ -136,7 +136,8 @@ public class NetworkActivity extends Activity {
                 Log.i(TAG, "Telnet£º" + telnet.toString());
             }
         };
-
+        thread.setDaemon(true);
+        thread.start();
     }
 
     public void traceRoute_onClick(View view) {
@@ -150,5 +151,8 @@ public class NetworkActivity extends Activity {
                 Log.i(TAG, "TraceRoute£º" + traceRoute.toString());
             }
         };
+
+        thread.setDaemon(true);
+        thread.start();
     }
 }
