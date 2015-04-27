@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
-import android.os.RemoteException;
 import com.ztf.andyhua.networktest.app.NetworkTest;
 import com.ztf.andyhua.networktest.app.command.aidl.ICommandInterface;
 import com.ztf.andyhua.networktest.app.utils.Tools;
@@ -16,21 +15,19 @@ import java.util.concurrent.Executors;
 
 /**
  * command same cmd line
- * <p/>
  * Created by AndyHua on 2015/4/25.
  */
 public final class Command {
-    // time out is 90 seconds
+    // Time Out is 90 seconds
     public static final int TIMEOUT = 90000;
-    // threads
+    // Threads
     private static ExecutorService EXECUTORSERVICE = null;
     // ICommandInterface
     private static ICommandInterface I_COMMAND = null;
     // IService Lock
     private static final Object I_LOCK = new Object();
-    /**
-     * service link class, used to instantiate the service interface
-     */
+
+    // Service link class, used to instantiate the service interface
     private static ServiceConnection I_CONN = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -54,15 +51,13 @@ public final class Command {
         }
     };
 
-    // mark if bind service
+    // Mark If Bind Service
     private static boolean IS_BIND = false;
 
-    // destroy service thread
+    // Destroy Service Thread
     private static Thread DESTROY_THREAD = null;
 
-    /**
-     * destroy service after 5 seconds run
-     */
+    // Destroy Service After 5 seconds run
     private static void destroyService() {
         if (DESTROY_THREAD == null) {
             DESTROY_THREAD = new Thread() {
@@ -77,15 +72,12 @@ public final class Command {
                     DESTROY_THREAD = null;
                 }
             };
-
             DESTROY_THREAD.setDaemon(true);
             DESTROY_THREAD.start();
         }
     }
 
-    /**
-     * cancel destroy service
-     */
+    // Cancel Destroy Service
     private static void cancelDestroyService() {
         if (DESTROY_THREAD != null) {
             DESTROY_THREAD.interrupt();
@@ -94,18 +86,17 @@ public final class Command {
     }
 
     /**
-     * start bind service
+     * Start bind Service
      */
     private static void bindService() {
         synchronized (Command.class) {
             if (!IS_BIND) {
                 Context context = NetworkTest.getApplication();
                 if (context == null) {
-                    throw new NullPointerException("Application is not null.Please NetworkTest.initialize(Application)");
+                    throw new NullPointerException("Application is not null.Please Genius.initialize(Application)");
                 } else {
-                    // init service
-                    context.bindService(new Intent(context, CommandService.class),
-                            I_CONN, Context.BIND_AUTO_CREATE);
+                    // Init service
+                    context.bindService(new Intent(context, CommandService.class), I_CONN, Context.BIND_AUTO_CREATE);
                     IS_BIND = true;
                 }
             }
@@ -113,13 +104,13 @@ public final class Command {
     }
 
     /**
-     * run do command
+     * Run do Command
      *
-     * @param command command
-     * @return result
+     * @param command Command
+     * @return Result
      */
     private static String commandRun(Command command) {
-        // wait bind
+        // Wait bind
         if (I_COMMAND == null) {
             synchronized (I_LOCK) {
                 if (I_COMMAND == null) {
@@ -132,92 +123,86 @@ public final class Command {
             }
         }
 
-        // cancel destroy service
+        // Cancel Destroy Service
         cancelDestroyService();
 
-        // get result
+        // Get result
         int count = 5;
         Exception error = null;
         while (count > 0) {
             if (command.isCancel) {
-                if (command.listener != null) {
+                if (command.listener != null)
                     command.listener.onCancel();
-                }
                 break;
             }
             try {
-                command.result = I_COMMAND.command(command.mId, command.timeout, command.parameters);
-                if (command.listener != null) {
+                command.result = I_COMMAND.command(command.id, command.timeout, command.parameters);
+                if (command.listener != null)
                     command.listener.onCompleted(command.result);
-                }
                 break;
-            } catch (RemoteException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
                 error = e;
                 count--;
                 Tools.sleepIgnoreInterrupt(3000);
             }
         }
 
-        // check is error
+        // Check is Error
         if (count <= 0 && command.listener != null) {
             command.listener.onError(error);
         }
 
-        // check is end and call destroy service
+        // Check is end and call destroy service
         if (I_COMMAND != null) {
             try {
-                if (I_COMMAND.getTaskCount() <= 0) {
+                if (I_COMMAND.getTaskCount() <= 0)
                     destroyService();
-                }
-            } catch (RemoteException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-
+        // Return
         return command.result;
     }
 
     /**
-     * command the test
+     * Command the test
      *
-     * @param command
-     * @return
+     * @param command Command
+     * @return Results
      */
     public static String command(Command command) {
-        // check service
-        if (!IS_BIND) {
+        // Check Service
+        if (!IS_BIND)
             bindService();
-        }
 
+        // Return
         return commandRun(command);
     }
 
     /**
-     * command the test
+     * Command the test
      *
-     * @param command
-     * @param listener
+     * @param command Command
      */
     public static void command(final Command command, CommandListener listener) {
         command.listener = listener;
-        // check service
-        if (!IS_BIND) {
+        // Check Service
+        if (!IS_BIND)
             bindService();
-        }
 
-        // check and init executor
+        // Check and init executor
         if (EXECUTORSERVICE == null) {
             synchronized (Command.class) {
                 if (EXECUTORSERVICE == null) {
-                    // init threads executor
+                    // Init threads executor
                     int size = Runtime.getRuntime().availableProcessors();
                     EXECUTORSERVICE = Executors.newFixedThreadPool(size > 0 ? size : 1);
                 }
             }
         }
 
-        // add executor service thread in executor run
+        // Add executorService thread in executor run
         try {
             EXECUTORSERVICE.execute(new Runnable() {
                 @Override
@@ -232,23 +217,20 @@ public final class Command {
     }
 
     /**
-     * cancel test
-     *
-     * @param command
+     * Cancel Test
      */
     public static void cancel(Command command) {
         command.isCancel = true;
-        if (I_COMMAND != null) {
+        if (I_COMMAND != null)
             try {
-                I_COMMAND.cancel(command.mId);
-            } catch (RemoteException e) {
+                I_COMMAND.cancel(command.id);
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
     }
 
     /**
-     * restart the command service
+     * Restart the Command Service
      */
     public static void restart() {
         dispose();
@@ -256,7 +238,7 @@ public final class Command {
     }
 
     /**
-     * dispose unbind service stop service
+     * Dispose unbindService stopService
      */
     public static void dispose() {
         synchronized (Command.class) {
@@ -268,7 +250,6 @@ public final class Command {
                 }
                 EXECUTORSERVICE = null;
             }
-
             if (IS_BIND) {
                 Context context = NetworkTest.getApplication();
                 if (context != null) {
@@ -278,23 +259,24 @@ public final class Command {
                         e.printStackTrace();
                     }
                 }
-                I_CONN = null;
+                I_COMMAND = null;
                 IS_BIND = false;
             }
         }
     }
 
     private int timeout = TIMEOUT;
-    private String mId = null;
+    private String id = null;
     private String parameters = null;
     private String result = null;
     private CommandListener listener = null;
     private boolean isCancel = false;
 
+
     /**
-     * get a command
+     * Get a Command
      *
-     * @param params params eg: "/system/bin/ping", "-c", "4", "-s", "100","www.baidu.com"
+     * @param params params eg: "/system/bin/ping", "-c", "4", "-s", "100","www.qiujuer.net"
      */
     public Command(String... params) {
         this(TIMEOUT, params);
@@ -304,33 +286,34 @@ public final class Command {
      * Get a Command
      *
      * @param timeout set this run timeOut
-     * @param params  params eg: "/system/bin/ping", "-c", "4", "-s", "100","www.baidu.com"
+     * @param params  params eg: "/system/bin/ping", "-c", "4", "-s", "100","www.qiujuer.net"
      */
     public Command(int timeout, String... params) {
-        // check params
-        if (params == null) {
-            throw new NullPointerException("params is not null");
-        }
+        // Check params
+        if (params == null)
+            throw new NullPointerException("params is not null.");
 
-        //run
+        // Run
         StringBuilder sb = new StringBuilder();
         for (String str : params) {
             sb.append(str);
             sb.append(" ");
         }
-
         this.parameters = sb.toString();
-        this.mId = UUID.randomUUID().toString();
+        this.id = UUID.randomUUID().toString();
         this.timeout = timeout;
     }
 
     /**
-     * delete the callback command listener
+     * Delete the callback CommandListener
      */
     public void removeListener() {
         listener = null;
     }
 
+    /**
+     * CommandListener
+     */
     public static interface CommandListener {
         public void onCompleted(String str);
 

@@ -21,7 +21,7 @@ import java.net.UnknownHostException;
 public class NetworkActivity extends Activity {
     private static final String TAG = NetworkActivity.class.getSimpleName();
 
-    private static final String TARGET = "www.baidu.com";
+    private static final String TARGET = "http://d.weibo.com/";
     private TextView result;
     private Button dnsBtn;
     private Button pingBtn;
@@ -98,7 +98,7 @@ public class NetworkActivity extends Activity {
                     // add DNS service
                     dnsResolve = new DnsResolve(TARGET, InetAddress.getByName("202.96.128.166"));
                     dnsResolve.start();
-                    result.setText("DnsResolve£º" + dnsResolve.toString());
+//                    result.setText("DnsResolve£º" + dnsResolve.toString());
                     Log.i(TAG, "DnsResolve£º" + dnsResolve.toString());
                 } catch (UnknownHostException e) {
                     e.printStackTrace();
@@ -117,7 +117,7 @@ public class NetworkActivity extends Activity {
                 // packets, packet size, the target, whether parsing IP
                 Ping ping = new Ping(4, 32, TARGET, true);
                 ping.start();
-                result.setText("Ping£º" + ping.toString());
+//                result.setText("Ping£º" + ping.toString());
                 Log.i(TAG, "Ping£º" + ping.toString());
             }
         };
@@ -132,7 +132,7 @@ public class NetworkActivity extends Activity {
                 // target, port
                 Telnet telnet = new Telnet(TARGET, 80);
                 telnet.start();
-                result.setText("Telnet£º" + telnet.toString());
+//                result.setText("Telnet£º" + telnet.toString());
                 Log.i(TAG, "Telnet£º" + telnet.toString());
             }
         };
@@ -147,7 +147,7 @@ public class NetworkActivity extends Activity {
                 // target
                 TraceRoute traceRoute = new TraceRoute(TARGET);
                 traceRoute.start();
-                result.setText("TraceRoute£º" + traceRoute.toString());
+//                result.setText("TraceRoute£º" + traceRoute.toString());
                 Log.i(TAG, "TraceRoute£º" + traceRoute.toString());
             }
         };

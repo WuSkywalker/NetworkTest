@@ -8,7 +8,7 @@ import com.ztf.andyhua.networktest.app.command.aidl.ICommandInterface;
 import com.ztf.andyhua.networktest.app.utils.Tools;
 
 import java.util.Collection;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -16,9 +16,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CommandService extends Service {
 
     private CommandServiceImpl impl;
-
-    public CommandService() {
-    }
 
     @Override
     public void onCreate() {
@@ -28,9 +25,8 @@ public class CommandService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        if (impl == null) {
+        if (impl == null)
             impl = new CommandServiceImpl();
-        }
         return impl;
     }
 
@@ -48,142 +44,137 @@ public class CommandService extends Service {
             impl = null;
         }
         super.onDestroy();
-
-        // kill process
+        // Kill process
         android.os.Process.killProcess(android.os.Process.myPid());
     }
 
-    private class CommandServiceImpl extends ICommandInterface.Stub {
 
-        private Map<String, CommandExecutor> commandExecutorMap = new Hashtable<String, CommandExecutor>();
-        private Lock mapLock = new ReentrantLock();
-        private Thread timeoutThread;
+    private class CommandServiceImpl extends ICommandInterface.Stub {
+        private Map<String, CommandExecutor> mCommandExecutorMap = new HashMap<String, CommandExecutor>();
+        private Lock mMapLock = new ReentrantLock();
+        private Thread mTimeoutThread;
 
         public CommandServiceImpl() {
-            // init
-            timeoutThread = new Thread(CommandServiceImpl.class.getName()) {
+            // Init
+            mTimeoutThread = new Thread(CommandServiceImpl.class.getName()) {
                 @Override
                 public void run() {
-                    // when thread is not destroy
-                    while (timeoutThread == this && !this.isInterrupted()) {
-                        if (commandExecutorMap != null && commandExecutorMap.size() > 0) {
+                    // When thread is not destroy
+                    while (mTimeoutThread == this && !this.isInterrupted()) {
+                        if (mCommandExecutorMap != null && mCommandExecutorMap.size() > 0) {
                             try {
-                                mapLock.lock();
-                                Collection<CommandExecutor> commandExecutors = commandExecutorMap.values();
+                                mMapLock.lock();
+                                Collection<CommandExecutor> commandExecutors = mCommandExecutorMap.values();
                                 for (CommandExecutor executor : commandExecutors) {
-                                    // kill service process
-                                    if (executor.isTimeOut()) {
+                                    // Kill Service Process
+                                    if (executor.isTimeOut())
                                         android.os.Process.killProcess(android.os.Process.myPid());
-                                    }
-                                    if (timeoutThread != this && this.isInterrupted()) {
+                                    if (mTimeoutThread != this && this.isInterrupted())
                                         break;
-                                    }
                                 }
                             } finally {
-                                mapLock.unlock();
+                                mMapLock.unlock();
                             }
                         }
-                        // sleep 10 second
-                        Tools.sleepIgnoreInterrupt(10);
+                        // Sleep 10 Second
+                        Tools.sleepIgnoreInterrupt(10000);
                     }
                 }
             };
-            timeoutThread.setDaemon(true);
-            timeoutThread.start();
+            mTimeoutThread.setDaemon(true);
+            mTimeoutThread.start();
         }
 
         /**
-         * destroy
+         * Destroy
          */
         protected void destroy() {
-            if (timeoutThread != null) {
-                timeoutThread.interrupt();
-                timeoutThread = null;
+            if (mTimeoutThread != null) {
+                mTimeoutThread.interrupt();
+                mTimeoutThread = null;
             }
-
             try {
-                mapLock.lock();
-                commandExecutorMap.clear();
-                commandExecutorMap = null;
+                mMapLock.lock();
+                mCommandExecutorMap.clear();
+                mCommandExecutorMap = null;
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                mapLock.unlock();
+                mMapLock.unlock();
             }
         }
 
+
         /**
-         * run command
+         * Run Command
          *
-         * @param id
-         * @param timeout
-         * @param params
-         * @return
-         * @throws RemoteException
+         * @param params params
+         * @return result
+         * @throws android.os.RemoteException
          */
         @Override
         public String command(String id, int timeout, String params) throws RemoteException {
-            CommandExecutor executor = commandExecutorMap.get(id);
+            CommandExecutor executor = mCommandExecutorMap.get(id);
             if (executor == null) {
                 try {
-                    mapLock.lock();
-                    executor = commandExecutorMap.get(id);
+                    mMapLock.lock();
+                    executor = mCommandExecutorMap.get(id);
                     if (executor == null) {
                         executor = CommandExecutor.create(timeout, params);
-                        commandExecutorMap.put(id, executor);
+                        mCommandExecutorMap.put(id, executor);
                     }
                 } finally {
-                    mapLock.unlock();
+                    mMapLock.unlock();
                 }
             }
 
-            // get result
+            // Get Result
             String result = executor.getResult();
 
             try {
-                mapLock.lock();
-                commandExecutorMap.remove(id);
+                mMapLock.lock();
+                mCommandExecutorMap.remove(id);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                mapLock.unlock();
+                mMapLock.unlock();
             }
             return result;
         }
 
         /**
-         * cancel command
+         * Cancel command
          *
-         * @param id command id
-         * @throws RemoteException
+         * @param id command.id
+         * @throws android.os.RemoteException
          */
         @Override
         public void cancel(String id) throws RemoteException {
-            CommandExecutor executor = commandExecutorMap.get(id);
+            CommandExecutor executor = mCommandExecutorMap.get(id);
             if (executor != null) {
                 try {
-                    mapLock.lock();
-                    commandExecutorMap.remove(id);
+                    mMapLock.lock();
+                    mCommandExecutorMap.remove(id);
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
-                    mapLock.unlock();
+                    mMapLock.unlock();
                 }
                 executor.destroy();
             }
         }
 
         /**
-         * get task count
+         * Get Task Count
          *
-         * @return
-         * @throws RemoteException
+         * @return Map Count
+         * @throws android.os.RemoteException
          */
         @Override
         public int getTaskCount() throws RemoteException {
-            if (commandExecutorMap == null)
+            if (mCommandExecutorMap == null)
                 return 0;
-            return commandExecutorMap.size();
+            return mCommandExecutorMap.size();
         }
     }
 }

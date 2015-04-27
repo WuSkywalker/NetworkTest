@@ -7,8 +7,8 @@ import com.ztf.andyhua.networktest.app.command.Command;
  * Created by AndyHua on 2015/4/27.
  */
 public class TraceRouteThread extends Thread {
-    private int ttl;
-    private String ip;
+    private int TTL;
+    private String IP;
     private Ping ping;
     private Command command;
     private TraceThreadInterface traceThreadInterface;
@@ -16,9 +16,10 @@ public class TraceRouteThread extends Thread {
     private boolean isArrived;
     private boolean isError;
 
+
     public TraceRouteThread(String ip, int ttl, TraceThreadInterface traceThreadInterface) {
-        this.ip = ip;
-        this.ttl = ttl;
+        this.IP = ip;
+        this.TTL = ttl;
         this.traceThreadInterface = traceThreadInterface;
 
         this.setName("TraceThread:" + ip + " " + ttl);
@@ -27,10 +28,10 @@ public class TraceRouteThread extends Thread {
     }
 
     /**
-     * ttl route
+     * TTL Route
      *
-     * @param ip
-     * @param ttl
+     * @param ip  ip
+     * @param ttl ttl
      * @return isError
      */
     private TraceRouteContainer trace(String ip, int ttl) {
@@ -38,13 +39,12 @@ public class TraceRouteThread extends Thread {
         if (!this.isInterrupted() && res != null && res.length() > 0) {
             res = res.toLowerCase();
             if (res.contains(NetModel.PING_EXCEED) || !res.contains(NetModel.PING_UNREACHABLE)) {
-                // success
+                // Succeed
                 String pIp = parseIpFromRoute(res);
                 if (!this.isInterrupted() && pIp != null && pIp.length() > 0) {
                     ping = new Ping(4, 32, pIp, false);
                     ping.start();
-                    TraceRouteContainer routeContainer = new TraceRouteContainer(ttl,
-                            pIp, ping.getLoss(), ping.getDelay());
+                    TraceRouteContainer routeContainer = new TraceRouteContainer(ttl, pIp, ping.getLossRate(), ping.getDelay());
                     ping = null;
                     isArrived = pIp.contains(ip);
                     return routeContainer;
@@ -56,11 +56,11 @@ public class TraceRouteThread extends Thread {
     }
 
     /**
-     * get ttl IP
+     * Get TTL IP
      *
-     * @param ip
-     * @param ttl
-     * @return ping ip and ttl result
+     * @param ip  Target IP
+     * @param ttl TTL
+     * @return Ping IP and TTL Result
      */
     private String launchRoute(String ip, int ttl) {
         command = new Command("/system/bin/ping",
@@ -68,6 +68,7 @@ public class TraceRouteThread extends Thread {
                 "-s", "32",
                 "-t", String.valueOf(ttl),
                 ip);
+
         String str = null;
         try {
             str = Command.command(command);
@@ -80,16 +81,16 @@ public class TraceRouteThread extends Thread {
     }
 
     /**
-     * parsing ip address
+     * Parsing IP address
      *
-     * @param ping
-     * @return ip address
+     * @param ping Ping IP and TTL Result
+     * @return IP Address
      */
     private String parseIpFromRoute(String ping) {
         String ip = null;
         try {
             if (ping.contains(NetModel.PING_FROM)) {
-                // get ip when ttl exceeded
+                // Get ip when ttl exceeded
                 int index = ping.indexOf(NetModel.PING_FROM);
                 ip = ping.substring(index + 5);
                 if (ip.contains(NetModel.PING_PAREN_THESE_OPEN)) {
@@ -97,13 +98,12 @@ public class TraceRouteThread extends Thread {
                     int indexClose = ip.indexOf(NetModel.PING_PAREN_THESE_CLOSE);
                     ip = ip.substring(indexOpen + 1, indexClose);
                 } else {
-                    // get ip when after from
+                    // Get ip when after from
                     ip = ip.substring(0, ip.indexOf("\n"));
-                    if (ip.contains(":")) {
+                    if (ip.contains(":"))
                         index = ip.indexOf(":");
-                    } else {
+                    else
                         index = ip.indexOf(" ");
-                    }
                     ip = ip.substring(0, index);
                 }
             } else if (ping.contains(NetModel.PING)) {
@@ -120,21 +120,19 @@ public class TraceRouteThread extends Thread {
     @Override
     public void run() {
         super.run();
-        TraceRouteContainer routeContainer = trace(ip, ttl);
+        TraceRouteContainer routeContainer = trace(IP, TTL);
         traceThreadInterface.complete(this, this.isError, this.isArrived, routeContainer);
         traceThreadInterface = null;
     }
 
     /**
-     * cancel this thread
+     * Cancel
      */
     public void cancel() {
-        if (ping != null) {
+        if (ping != null)
             ping.cancel();
-        }
-        if (command != null) {
+        if (command != null)
             Command.cancel(command);
-        }
         try {
             this.interrupt();
         } catch (Exception e) {

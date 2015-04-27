@@ -18,19 +18,19 @@ public class DnsResolve extends NetModel {
     private long delay;
 
     /**
-     * domain name resolution test
+     * Domain name resolution test
      *
-     * @param hostName domain name address
+     * @param hostName Domain name address
      */
     public DnsResolve(String hostName) {
-        this.hostName = hostName;
+        this(hostName, null);
     }
 
     /**
-     * domain name resolution test
+     * Domain name resolution test
      *
-     * @param hostName domain name address
-     * @param server   specify the domain name server
+     * @param hostName Domain name address
+     * @param server   Specify the domain name server
      */
     public DnsResolve(String hostName, InetAddress server) {
         this.hostName = hostName;
@@ -38,18 +38,18 @@ public class DnsResolve extends NetModel {
     }
 
     /**
-     * this resolve domain ips
+     * This resolve domain to ips
      *
-     * @param domain    domain name
-     * @param dnsServer DNS server
-     * @return ips
+     * @param domain    Domain Name
+     * @param dnsServer DNS Server
+     * @return IPs
      */
     private ArrayList<String> resolve(String domain, InetAddress dnsServer) {
-        // pointer
+        // Pointer
         int pos = 12;
-        // init buffer
+        // Init buffer
         byte[] sendBuffer = new byte[100];
-        // message head
+        // Message head
         sendBuffer[0] = ID[0];
         sendBuffer[1] = ID[1];
         sendBuffer[2] = 0x01;
@@ -63,17 +63,16 @@ public class DnsResolve extends NetModel {
         sendBuffer[10] = 0x00;
         sendBuffer[11] = 0x00;
 
-        // add domain
+        // Add domain
         String[] part = domain.split("\\.");
         for (String s : part) {
-            if (s == null && s.length() <= 0) {
+            if (s == null || s.length() <= 0)
                 continue;
-            }
-            int length = s.length();
-            sendBuffer[pos++] = (byte) length;
+            int sLength = s.length();
+            sendBuffer[pos++] = (byte) sLength;
             int i = 0;
             char[] val = s.toCharArray();
-            while (i < length) {
+            while (i < sLength) {
                 sendBuffer[pos++] = (byte) val[i++];
             }
         }
@@ -88,7 +87,7 @@ public class DnsResolve extends NetModel {
         sendBuffer[pos++] = 0x01;
 
         /**
-         * UDP send
+         * UDP Send
          */
         DatagramSocket ds = null;
         byte[] receiveBuffer = null;
@@ -96,15 +95,15 @@ public class DnsResolve extends NetModel {
             ds = new DatagramSocket();
             ds.setSoTimeout(TIME_OUT);
 
-            // send
+            // Send
             DatagramPacket dp = new DatagramPacket(sendBuffer, pos, dnsServer, 53);
             ds.send(dp);
 
-            // receive
+            // Receive
             dp = new DatagramPacket(new byte[512], 512);
             ds.receive(dp);
 
-            // copy to receive buffer
+            // Copy
             int len = dp.getLength();
             receiveBuffer = new byte[len];
             System.arraycopy(dp.getData(), 0, receiveBuffer, 0, len);
@@ -117,41 +116,36 @@ public class DnsResolve extends NetModel {
             error = NETWORK_IO_ERROR;
             e.printStackTrace();
         } finally {
-            if (ds != null) {
+            if (ds != null)
                 ds.close();
-            }
         }
 
         /**
-         * resolve data
+         * Resolve data
          */
 
-        // check is return
-        if (error != SUCCEED || receiveBuffer == null) {
+        // Check is return
+        if (error != SUCCEED || receiveBuffer == null)
             return null;
-        }
 
-        // get ID
+        // ID
         if (receiveBuffer[0] != ID[0] || receiveBuffer[1] != ID[1]
-                || (receiveBuffer[2] & 0x80) != 0x80) {
+                || (receiveBuffer[2] & 0x80) != 0x80)
             return null;
-        }
 
-        // get count
+        // Count
         int queryCount = (receiveBuffer[4] << 8) | receiveBuffer[5];
-        if (queryCount == 0) {
+        if (queryCount == 0)
             return null;
-        }
 
         int answerCount = (receiveBuffer[6] << 8) | receiveBuffer[7];
-        if (answerCount == 0) {
+        if (answerCount == 0)
             return null;
-        }
 
-        // pointer restore
+        // Pointer restore
         pos = 12;
 
-        // skip the query part head
+        // Skip the query part head
         for (int i = 0; i < queryCount; i++) {
             while (receiveBuffer[pos] != 0x00) {
                 pos += receiveBuffer[pos] + 1;
@@ -159,7 +153,7 @@ public class DnsResolve extends NetModel {
             pos += 5;
         }
 
-        // get ip form data
+        // Get ip form data
         ArrayList<String> iPs = new ArrayList<String>();
         for (int i = 0; i < answerCount; i++) {
             if (receiveBuffer[pos] == (byte) 0xC0) {
@@ -191,19 +185,17 @@ public class DnsResolve extends NetModel {
 
     @Override
     public void start() {
-        long startTime = System.currentTimeMillis();
+        long sTime = System.currentTimeMillis();
         if (server == null) {
             try {
                 InetAddress[] adds = InetAddress.getAllByName(hostName);
                 if (adds != null && adds.length > 0) {
                     IPs = new ArrayList<String>(adds.length);
-                    for (InetAddress add : adds) {
+                    for (InetAddress add : adds)
                         IPs.add(add.getHostAddress());
-                    }
                 }
             } catch (UnknownHostException e) {
                 error = UNKNOWN_HOST_ERROR;
-                e.printStackTrace();
             } catch (Exception e) {
                 error = UNKNOWN_ERROR;
             }
@@ -211,14 +203,12 @@ public class DnsResolve extends NetModel {
             try {
                 IPs = resolve(hostName, server);
             } catch (Exception e) {
-                if (error == SUCCEED) {
+                if (error == SUCCEED)
                     error = UNKNOWN_ERROR;
-                }
                 e.printStackTrace();
             }
         }
-
-        delay = System.currentTimeMillis() - startTime;
+        delay = System.currentTimeMillis() - sTime;
     }
 
     @Override

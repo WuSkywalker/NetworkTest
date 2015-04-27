@@ -13,7 +13,7 @@ import com.ztf.andyhua.networktest.app.command.Command;
 public class CommandActivity extends Activity {
     private static final String TAG = CommandActivity.class.getSimpleName();
 
-    private static final String TARGET = "www.baidu.com";
+    private static final String TARGET = "http://d.weibo.com/";
 
     private TextView result;
 
@@ -34,7 +34,7 @@ public class CommandActivity extends Activity {
                         "-c", "4", "-s", "100",
                         TARGET);
                 String res = Command.command(command);
-                result.setText("\n\nCommand Sync£º\n" + res);
+//                result.setText("\n\nCommand Sync£º\n" + res);
                 Log.i(TAG, "\n\nCommand Sync£º\n" + res);
             }
         };
@@ -51,19 +51,19 @@ public class CommandActivity extends Activity {
         Command.command(command, new Command.CommandListener() {
             @Override
             public void onCompleted(String str) {
-                result.setText("\n\nCommand Async onCompleted£º\n" + str);
+//                result.setText("\n\nCommand Async onCompleted£º\n" + str);
                 Log.i(TAG, "\n\nCommand Async onCompleted£º\n" + str);
             }
 
             @Override
             public void onCancel() {
-                result.setText("\n\nCommand Async onCancel");
+//                result.setText("\n\nCommand Async onCancel");
                 Log.i(TAG, "\n\nCommand Async onCancel");
             }
 
             @Override
             public void onError(Exception e) {
-                result.setText("\n\nCommand Async onError:" + (e != null ? e.toString() : "null"));
+//                result.setText("\n\nCommand Async onError:" + (e != null ? e.toString() : "null"));
                 Log.i(TAG, "\n\nCommand Async onError:" + (e != null ? e.toString() : "null"));
             }
         });

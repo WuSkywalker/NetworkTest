@@ -10,6 +10,8 @@ import java.net.UnknownHostException;
  * Created by AndyHua on 2015/4/27.
  */
 public class Telnet extends NetModel {
+    private static final String TAG = Telnet.class.getSimpleName();
+
     private static final int TIME_OUT = 3000;
     private String host;
     private int port;
@@ -32,25 +34,22 @@ public class Telnet extends NetModel {
             } catch (SocketException e) {
                 e.printStackTrace();
             }
-
             socket.connect(new InetSocketAddress(host, port), TIME_OUT);
-            if (isConnected = socket.isConnected()) {
+            if (isConnected = socket.isConnected())
                 delay = System.currentTimeMillis() - startTime;
-            } else {
+            else
                 error = TCP_LINK_ERROR;
-            }
         } catch (UnknownHostException e) {
             error = UNKNOWN_HOST_ERROR;
         } catch (IOException e) {
-            e.printStackTrace();
+            error = TCP_LINK_ERROR;
         } finally {
-            if (socket != null) {
+            if (socket != null)
                 try {
                     socket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            }
         }
     }
 

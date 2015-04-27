@@ -10,10 +10,10 @@ import java.util.concurrent.TimeUnit;
  * Created by AndyHua on 2015/4/27.
  */
 public class TraceRoute extends NetModel implements TraceRouteThread.TraceThreadInterface {
-    private static final int ONCE_COUNT = Runtime.getRuntime().availableProcessors();
-    private static final int LOOP_COUNT = 30 / ONCE_COUNT;
+    private final static int ONCE_COUNT = Runtime.getRuntime().availableProcessors();
+    private final static int LOOP_COUNT = 30 / ONCE_COUNT;
 
-    private final Object LOCK = new Object();
+    private final Object lock = new Object();
     private String target;
     private String IP;
     private List<String> routes = null;
@@ -26,20 +26,22 @@ public class TraceRoute extends NetModel implements TraceRouteThread.TraceThread
     private transient CountDownLatch countDownLatch = null;
 
     /**
-     * trace route domain or ip
+     * TraceRoute domain or ip
+     * Return the  domain or ip route result
      *
-     * @param target
+     * @param target domain or ip
      */
     public TraceRoute(String target) {
         this.target = target;
     }
 
+
     /**
-     * clear thread list
+     * Clear List
      */
     private void clear() {
         if (threads != null) {
-            synchronized (LOCK) {
+            synchronized (lock) {
                 for (TraceRouteThread thread : threads) {
                     thread.cancel();
                 }
@@ -47,105 +49,10 @@ public class TraceRoute extends NetModel implements TraceRouteThread.TraceThread
         }
     }
 
-    /**
-     * override start
-     */
-    @Override
-    public void start() {
-        // get IPs
-        DnsResolve dns = new DnsResolve(target);
-        dns.start();
-        List<String> ips = dns.getAddresses();
-        if (dns.getError() != NetModel.SUCCEED || ips == null || ips.size() == 0) {
-            return;
-        }
-
-        IP = ips.get(0);
-
-        // init list
-        routeContainers = new ArrayList<TraceRouteContainer>();
-        threads = new ArrayList<TraceRouteThread>(ONCE_COUNT);
-
-        // loop
-        for (int i = 0; i < LOOP_COUNT; ++i) {
-            countDownLatch = new CountDownLatch(ONCE_COUNT);
-            synchronized (LOCK) {
-                for (int j = 1; j <= ONCE_COUNT; ++j) {
-                    // get ttl
-                    final int ttl = i * ONCE_COUNT + j;
-                    // thread run get tp ttl ping info
-                    threads.add(new TraceRouteThread(IP, ttl, this));
-                }
-            }
-
-            // await 40 seconds long time
-            try {
-                countDownLatch.await(40, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            // end
-            if (countDownLatch.getCount() > 0) {
-                clear();
-            }
-
-            // clear
-            countDownLatch = null;
-            synchronized (LOCK) {
-                threads.clear();
-            }
-
-            // break loop
-            if (isDone || isArrived || errorCount > 3) {
-                break;
-            }
-        }
-
-        // set result
-        if (routeContainers.size() > 0) {
-            // sort
-            Collections.sort(routeContainers,
-                    new TraceRouteContainer.TraceRouteContainerComparator());
-
-            // set values
-            ArrayList<String> routes = new ArrayList<String>();
-            int size = routeContainers.size();
-            String prevIP = null;
-
-            // for loop IP
-            for (int s = 0; s < size; ++s) {
-                TraceRouteContainer container = routeContainers.get(s);
-                if (prevIP != null && container.ip.equals(prevIP)) {
-                    break;
-                } else {
-                    routes.add(container.toString());
-                    prevIP = container.ip;
-                }
-            }
-
-            routes.trimToSize();
-            this.routes = routes;
-        }
-
-        // clear
-        routeContainers = null;
-        threads = null;
-    }
-
-    /**
-     *
-     */
-    @Override
-    public void cancel() {
-        isDone = true;
-        clear();
-    }
-
     @Override
     public void complete(TraceRouteThread trace, boolean isError, boolean isArrived, TraceRouteContainer routeContainer) {
         if (threads != null) {
-            synchronized (LOCK) {
+            synchronized (lock) {
                 try {
                     threads.remove(trace);
                 } catch (NullPointerException e) {
@@ -153,35 +60,120 @@ public class TraceRoute extends NetModel implements TraceRouteThread.TraceThread
                 }
             }
         }
-
         if (!isDone) {
-            if (isError) {
+            if (isError)
                 this.errorCount++;
-            }
             this.isArrived = isArrived;
-            if (routeContainers != null && routeContainer != null) {
+            if (routeContainers != null && routeContainer != null)
                 routeContainers.add(routeContainer);
-            }
         }
-
-        if (countDownLatch != null && countDownLatch.getCount() > 0) {
+        if (countDownLatch != null && countDownLatch.getCount() > 0)
             countDownLatch.countDown();
-        }
     }
 
     /**
-     * the routes target IP
+     * Override Start
+     */
+    @Override
+    public void start() {
+        // Get IPs
+        DnsResolve dns = new DnsResolve(target);
+        dns.start();
+        List<String> ips = dns.getAddresses();
+        if (dns.getError() != NetModel.SUCCEED || ips == null || ips.size() == 0)
+            return;
+        IP = ips.get(0);
+
+        // Init List
+        routeContainers = new ArrayList<TraceRouteContainer>();
+        threads = new ArrayList<TraceRouteThread>(ONCE_COUNT);
+
+        // Loop
+        for (int i = 0; i < LOOP_COUNT; i++) {
+            countDownLatch = new CountDownLatch(ONCE_COUNT);
+            synchronized (lock) {
+                for (int j = 1; j <= ONCE_COUNT; j++) {
+                    // Get ttl
+                    final int ttl = i * ONCE_COUNT + j;
+                    // Thread run get tp ttl ping information
+                    threads.add(new TraceRouteThread(IP, ttl, this));
+                }
+            }
+            // Await 40 seconds long time
+            try {
+                countDownLatch.await(40, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // End
+            if (countDownLatch.getCount() > 0) {
+                clear();
+            }
+
+            // Clear
+            countDownLatch = null;
+            synchronized (lock) {
+                threads.clear();
+            }
+
+            // Break Loop
+            if (isDone || isArrived || errorCount > 3)
+                break;
+        }
+
+        // Set Result
+        if (routeContainers.size() > 0) {
+            // Sort
+            Collections.sort(routeContainers, new TraceRouteContainer.TraceRouteContainerComparator());
+
+            // Set values
+            ArrayList<String> routes = new ArrayList<String>();
+            int size = routeContainers.size();
+            String prevIP = null;
+
+            // For
+            for (int s = 0; s < size; s++) {
+                TraceRouteContainer container = routeContainers.get(s);
+                if (prevIP != null && container.IP.equals(prevIP)) {
+                    break;
+                } else {
+                    routes.add(container.toString());
+                    prevIP = container.IP;
+                }
+            }
+
+            routes.trimToSize();
+            this.routes = routes;
+        }
+
+        // Clear
+        routeContainers = null;
+        threads = null;
+    }
+
+    /**
+     * Override Cancel
+     */
+    @Override
+    public void cancel() {
+        isDone = true;
+        clear();
+    }
+
+    /**
+     * The Routes Target IP
      *
-     * @return IP address
+     * @return IP Address
      */
     public String getAddress() {
         return IP;
     }
 
     /**
-     * for routing values
+     * For routing values
      *
-     * @return
+     * @return Routes
      */
     public List<String> getRoutes() {
         return routes;
@@ -192,7 +184,8 @@ public class TraceRoute extends NetModel implements TraceRouteThread.TraceThread
         return "TraceRoute{" +
                 "target='" + target + '\'' +
                 ", IP='" + IP + '\'' +
-                ", routes=" + (routes == null ? "[]" : routes.toString()) +
+                ", routes=" + routes +
+                ", errorCount=" + errorCount +
                 '}';
     }
 }

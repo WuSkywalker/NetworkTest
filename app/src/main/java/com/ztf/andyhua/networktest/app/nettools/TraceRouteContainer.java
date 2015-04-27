@@ -8,47 +8,43 @@ import java.util.Comparator;
  * Created by AndyHua on 2015/4/27.
  */
 public class TraceRouteContainer {
-    public String ip;
-    public int ttl;
+    public String IP;
+    public int TTL;
     public float loss;
     public float delay;
 
     public TraceRouteContainer(int ttl, String ip, float loss, float delay) {
-        this.ttl = ttl;
-        this.ip = ip;
+        this.TTL = ttl;
+        this.IP = ip;
         this.loss = loss;
         this.delay = delay;
     }
 
-    @Override
-    public String toString() {
-        return "ttl:" + ttl +
-                ", ip:'" + ip + '\'' +
-                ", loss:" + loss +
-                ", delay:" + delay;
-    }
-
     /**
-     * the TraceRoute results are sorted by this class
+     * The TraceRouteRoute results are sorted to sort the TraceRouteThread result
      */
     protected static class TraceRouteContainerComparator implements Comparator<TraceRouteContainer> {
-
-        @Override
-        public int compare(TraceRouteContainer lhs, TraceRouteContainer rhs) {
-            if (lhs == null) {
+        public int compare(TraceRouteContainer container1, TraceRouteContainer container2) {
+            if (container1 == null)
                 return 1;
-            }
-            if (rhs == null) {
+            if (container2 == null)
                 return -1;
-            }
-
-            if (lhs.ttl < rhs.ttl) {
+            if (container1.TTL < container2.TTL)
                 return -1;
-            } else if (lhs.ttl == rhs.ttl) {
+            else if (container1.TTL == container2.TTL)
                 return 0;
-            } else {
+            else
                 return 1;
-            }
         }
+    }
+
+    @Override
+    public String toString() {
+        return "TraceRouteContainer{" +
+                "IP='" + IP + '\'' +
+                ", TTL=" + TTL +
+                ", loss=" + loss +
+                ", delay=" + delay +
+                '}';
     }
 }

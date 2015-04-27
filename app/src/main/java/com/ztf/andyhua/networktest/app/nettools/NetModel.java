@@ -4,6 +4,7 @@ package com.ztf.andyhua.networktest.app.nettools;
  * Created by AndyHua on 2015/4/25.
  */
 public abstract class NetModel {
+
     public static final int SUCCEED = 0;
     public static final int UNKNOWN_ERROR = 1;
     public static final int TCP_LINK_ERROR = 2;
@@ -34,6 +35,7 @@ public abstract class NetModel {
      * 5 packets transmitted, 5 received, 0% packet loss, time 4005ms
      * rtt min/avg/max/mdev = 55.534/60.450/62.384/2.571 ms
      */
+
     protected static final String PING = "ping";
     protected static final String PING_FROM = "from";
     protected static final String PING_PAREN_THESE_OPEN = "(";
@@ -66,13 +68,12 @@ public abstract class NetModel {
         String str[] = ip.split("\\.");
         byte[] bIp = new byte[str.length];
         try {
-            for (int i = 0, len = str.length; i < len; ++i) {
-                bIp[i] = (byte) Integer.parseInt(str[i], 10);
+            for (int i = 0, len = str.length; i < len; i++) {
+                bIp[i] = (byte) (Integer.parseInt(str[i], 10));
             }
         } catch (NumberFormatException e) {
             e.printStackTrace();
         }
-
         return bIp;
     }
 }

@@ -9,58 +9,57 @@ public class Ping extends NetModel {
 
     private String target;
     private String ip = null;
-    private float loss = 1.0f;
-    private float delay = 0.0f;
-    private float totalTime = 0.0f;
+    private float loss = 1f;
+    private float delay = 0;
+    private float totalTime = 0;
 
     private transient boolean isAnalysisIp;
     private transient int count, size;
     private transient Command command;
 
     /**
-     * to specify the IP pr domain name to Ping test and return the IP, packet loss,
-     * delay parameter to specify the IP or domain name such as Ping test and return
-     * the IP, packet loss, delay parameter
+     * To specify the IP or domain name to Ping test and return the IP, packet loss,
+     * delay parameter to specify the IP or domain name such as Ping test and return the IP,
+     * packet loss, delay and other parameters
      *
-     * @param target the target
+     * @param target The target
      */
     public Ping(String target) {
         this(4, 32, target, true);
     }
 
     /**
-     * to specify the IP pr domain name to Ping test and return the IP, packet loss,
-     * delay parameter to specify the IP or domain name such as Ping test and return
-     * the IP, packet loss, delay parameter
+     * To specify the IP or domain name to Ping test and return the IP, packet loss,
+     * delay parameter to specify the IP or domain name such as Ping test and return the IP,
+     * packet loss, delay and other parameters
      *
-     * @param count  packets
-     * @param size   packets size
-     * @param target the target
+     * @param count  Packets
+     * @param size   Packet size
+     * @param target The target
      */
     public Ping(int count, int size, String target) {
         this(count, size, target, true);
     }
 
     /**
-     * to specify the IP pr domain name to Ping test and return the IP, packet loss,
-     * delay parameter to specify the IP or domain name such as Ping test and return
-     * the IP, packet loss, delay parameter
+     * To specify the IP or domain name to Ping test and return the IP, packet loss,
+     * delay parameter to specify the IP or domain name such as Ping test and return the IP,
+     * packet loss, delay and other parameters
      *
-     * @param count        packets
-     * @param size         packets size
-     * @param target       the target
-     * @param isAnalysisIp whether parsing IP
+     * @param count        Packets
+     * @param size         Packet size
+     * @param target       The target
+     * @param isAnalysisIp Whether parsing IP
      */
     public Ping(int count, int size, String target, boolean isAnalysisIp) {
+        this.isAnalysisIp = isAnalysisIp;
         this.count = count;
         this.size = size;
         this.target = target;
-        this.isAnalysisIp = isAnalysisIp;
-
     }
 
     /**
-     * to parse and load
+     * To parse and load
      *
      * @return
      */
@@ -72,7 +71,7 @@ public class Ping extends NetModel {
                 target);
         try {
             String res = Command.command(command);
-            totalTime = System.currentTimeMillis() - startTime;
+            totalTime = (System.currentTimeMillis() - startTime);
             return res;
         } catch (Exception e) {
             cancel();
@@ -83,7 +82,7 @@ public class Ping extends NetModel {
     }
 
     /**
-     * parse ping ip
+     * parse ip
      *
      * @param ping
      * @return
@@ -99,48 +98,40 @@ public class Ping extends NetModel {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return ip;
     }
 
     /**
-     * parse packets loss
+     * parse loss packets
      *
      * @param ping
      * @return
      */
     private float parseLoss(String ping) {
-        float transmit = 0.0f, error = 0.0f, receive = 0.0f, lossRate = 0.0f;
+        float transmit = 0f, error = 0f, receive = 0f, lossRate = 0f;
         try {
-            if (ping.contains(NetModel.PING_TRANSMIT)) {
-                String lossStr = ping.substring(ping.indexOf(NetModel.PING_BREAK_LINE,
-                        ping.indexOf(NetModel.PING_STATISTICS)) + 1);
+            if (ping.contains(NetModel.PING_STATISTICS)) {
+                String lossStr = ping.substring(ping.indexOf(NetModel.PING_BREAK_LINE, ping.indexOf(NetModel.PING_STATISTICS)) + 1);
                 lossStr = lossStr.substring(0, lossStr.indexOf(NetModel.PING_BREAK_LINE));
-                String[] strArray = lossStr.split(NetModel.PING_COMMA);
+                String strArray[] = lossStr.split(NetModel.PING_COMMA);
                 for (String str : strArray) {
-                    if (str.contains(NetModel.PING_TRANSMIT)) {
-                        if (str.contains(NetModel.PING_TRANSMIT)) {
-                            transmit = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_TRANSMIT)));
-                        } else if (str.contains(NetModel.PING_RECEIVED)) {
-                            receive = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_RECEIVED)));
-                        } else if (str.contains(NetModel.PING_ERRORS)) {
-                            error = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_ERRORS)));
-                        } else if (str.contains(NetModel.PING_LOSS)) {
-                            lossRate = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_RATE)));
-                        }
-                    }
-                }
-
-                if (transmit != 0) {
-                    lossRate = error / transmit;
-                } else if (lossRate == 0) {
-                    lossRate = error / (error + receive);
+                    if (str.contains(NetModel.PING_TRANSMIT))
+                        transmit = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_TRANSMIT)));
+                    else if (str.contains(NetModel.PING_RECEIVED))
+                        receive = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_RECEIVED)));
+                    else if (str.contains(NetModel.PING_ERRORS))
+                        error = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_ERRORS)));
+                    else if (str.contains(NetModel.PING_LOSS))
+                        lossRate = Float.parseFloat(str.substring(0, str.indexOf(NetModel.PING_RATE)));
                 }
             }
+            if (transmit != 0)
+                lossRate = error / transmit;
+            else if (lossRate == 0)
+                lossRate = error / (error + receive);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return lossRate;
     }
 
@@ -156,7 +147,7 @@ public class Ping extends NetModel {
             if (ping.contains(NetModel.PING_RTT)) {
                 String lossStr = ping.substring(ping.indexOf(NetModel.PING_RTT));
                 lossStr = lossStr.substring(lossStr.indexOf(NetModel.PING_EQUAL) + 2);
-                String[] strArray = lossStr.split(NetModel.PING_SLASH);
+                String strArray[] = lossStr.split(NetModel.PING_SLASH);
                 delay = Float.parseFloat(strArray[1]);
             }
         } catch (Exception e) {
@@ -171,16 +162,15 @@ public class Ping extends NetModel {
         if (res != null && res.length() > 0) {
             res = res.toLowerCase();
             if (res.contains(NetModel.PING_UNREACHABLE) && !res.contains(NetModel.PING_EXCEED)) {
-                // failed to ping
-                loss = 1.0f;
+                // Failed
+                loss = 1f;
                 error = HOST_UNREACHABLE_ERROR;
             } else {
-                // success
+                // Succeed
                 loss = parseLoss(res);
                 delay = parseDelay(res);
-                if (isAnalysisIp) {
+                if (isAnalysisIp)
                     ip = parseIp(res);
-                }
             }
         } else {
             error = DROP_DATA_ERROR;
@@ -189,16 +179,15 @@ public class Ping extends NetModel {
 
     @Override
     public void cancel() {
-        if (command != null) {
+        if (command != null)
             Command.cancel(command);
-        }
     }
 
     public String getIp() {
         return ip;
     }
 
-    public float getLoss() {
+    public float getLossRate() {
         return loss;
     }
 
@@ -213,7 +202,8 @@ public class Ping extends NetModel {
     @Override
     public String toString() {
         return "Ping{" +
-                "ip='" + ip + '\'' +
+                "target='" + target + '\'' +
+                ", ip='" + ip + '\'' +
                 ", loss=" + loss +
                 ", delay=" + delay +
                 ", totalTime=" + totalTime +

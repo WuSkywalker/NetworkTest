@@ -10,41 +10,50 @@ import java.util.concurrent.locks.ReentrantLock;
  * Created by AndyHua on 2015/4/25.
  */
 public class CommandExecutor {
+    // TAG
     private static final String TAG = CommandExecutor.class.getSimpleName();
-
+    // Final
     private static final String BREAK_LINE = "\n";
     private static final int BUFFER_LENGTH = 128;
     private static final byte[] BUFFER = new byte[BUFFER_LENGTH];
     private static final Lock LOCK = new ReentrantLock();
-
-    // process builder
-
+    // ProcessBuilder
     private static final ProcessBuilder PRC = new ProcessBuilder();
 
-    // class value
+    // Class value
     private final Process process;
     private final int timeout;
     private final long startTime;
 
-    // result
+    // Result
     private final StringBuilder result;
 
-    // stream
+    // Stream
     private InputStream inStream;
     private InputStream errStream;
     private OutputStream outStream;
     private InputStreamReader inStreamReader = null;
     private BufferedReader inStreamBuffer = null;
 
-    // is end
+    // Is end
     private boolean isDone;
 
+    /**
+     * Get CommandExecutor
+     *
+     * @param process Process
+     */
     private CommandExecutor(Process process, int timeout) {
-        // init
-        this.process = process;
+        // Init
         this.timeout = timeout;
         this.startTime = System.currentTimeMillis();
+        this.process = process;
+        // Get
+        outStream = process.getOutputStream();
+        inStream = process.getInputStream();
+        errStream = process.getErrorStream();
 
+        // In
         if (inStream != null) {
             inStreamReader = new InputStreamReader(inStream);
             inStreamBuffer = new BufferedReader(inStreamReader, BUFFER_LENGTH);
@@ -53,77 +62,78 @@ public class CommandExecutor {
         result = new StringBuilder();
 
         if (inStream != null) {
-            // start read thread
+            // Start read thread
             Thread processThread = new Thread(TAG) {
                 @Override
                 public void run() {
                     startRead();
                 }
             };
-
             processThread.setDaemon(true);
             processThread.start();
         }
     }
 
     /**
-     * read
+     * Read
      */
     private void read() {
         String str;
-        // read data
+        // Read data
         try {
             while ((str = inStreamBuffer.readLine()) != null) {
                 result.append(str);
                 result.append(BREAK_LINE);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Run thread
+     */
     private void startRead() {
-        // while to end
+        // While to end
         while (true) {
             try {
                 process.exitValue();
-                // read last
+                //read last
                 read();
                 break;
             } catch (IllegalThreadStateException e) {
                 read();
-                //e.printStackTrace();
             }
             Tools.sleepIgnoreInterrupt(50);
         }
 
-        // read end
+        // Read end
         int len;
         if (inStream != null) {
             try {
                 while (true) {
                     len = inStream.read(BUFFER);
-                    if (len <= 0) {
+                    if (len <= 0)
                         break;
-                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        // close destroy and done the read
+        // Close destroy and done the read
         close();
         destroy();
 
         isDone = true;
+
     }
 
     /**
-     * close the io
+     * Close
      */
     private void close() {
-        // out
+        // Out
         if (outStream != null) {
             try {
                 outStream.close();
@@ -132,8 +142,7 @@ public class CommandExecutor {
             }
             outStream = null;
         }
-
-        // error
+        // Err
         if (errStream != null) {
             try {
                 errStream.close();
@@ -142,92 +151,86 @@ public class CommandExecutor {
             }
             errStream = null;
         }
-
-        // in
+        // In
         if (inStream != null) {
             try {
                 inStream.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
             inStream = null;
         }
-
         if (inStreamReader != null) {
             try {
                 inStreamReader.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
             inStreamReader = null;
         }
-
         if (inStreamBuffer != null) {
             try {
                 inStreamBuffer.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
             inStreamBuffer = null;
         }
     }
 
     /**
-     * @param timeout
-     * @param param   eg:"/system/bin/ping -c 4 -s 100 www.baidu.com"
-     * @return
+     * Run
+     *
+     * @param param param eg: "/system/bin/ping -c 4 -s 100 www.qiujuer.net"
      */
     protected static CommandExecutor create(int timeout, String param) {
         String[] params = param.split(" ");
         CommandExecutor processModel = null;
         try {
             LOCK.lock();
-            Process process = PRC.command(params).redirectErrorStream(true).start();
+            Process process = PRC.command(params)
+                    .redirectErrorStream(true)
+                    .start();
             processModel = new CommandExecutor(process, timeout);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            // sleep 10 to create next
+            // Sleep 10 to create next
             Tools.sleepIgnoreInterrupt(10);
             LOCK.unlock();
         }
-
         return processModel;
     }
 
     /**
-     * get is time out
+     * Get is Time Out
      *
-     * @return
+     * @return Time Out
      */
     protected boolean isTimeOut() {
         return ((System.currentTimeMillis() - startTime) >= timeout);
     }
 
     /**
-     * get result
+     * Get Result
      *
-     * @return
+     * @return Result
      */
     protected String getResult() {
-        // until read end
+        // Until read end
         while (!isDone) {
             Tools.sleepIgnoreInterrupt(500);
         }
 
-        // get return value
-        if (result.length() == 0) {
+        // Get return value
+        if (result.length() == 0)
             return null;
-        } else {
+        else
             return result.toString();
-        }
     }
 
     /**
-     *
+     * Destroy
      */
     protected void destroy() {
         String str = process.toString();
